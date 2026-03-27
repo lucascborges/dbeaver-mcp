@@ -57,8 +57,8 @@ echo "✓ Build concluído"
 # 6. Verificar workspace DBeaver
 echo ""
 echo "Verificando workspace do DBeaver..."
-node -e "
-  const { findWorkspace } = require('$INSTALL_DIR/dist/dbeaver.js');
+node --input-type=module -e "
+  import { findWorkspace } from '$INSTALL_DIR/dist/dbeaver.js';
   try { findWorkspace(); console.log('✓ Workspace encontrado'); }
   catch(e) { console.log('⚠ ' + e.message.split('\n')[0]); }
 " 2>/dev/null || echo "⚠ Workspace do DBeaver não encontrado."

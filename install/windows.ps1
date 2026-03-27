@@ -73,15 +73,11 @@ Write-Host "OK Build concluido" -ForegroundColor Green
 Write-Host ""
 Write-Host "Verificando workspace do DBeaver..."
 $testScript = @"
-try {
-  const { findWorkspace } = require('$($InstallDir -replace '\\','/')/dist/dbeaver.js');
-  findWorkspace();
-  console.log('OK Workspace encontrado');
-} catch(e) {
-  console.log('AVISO: ' + e.message.split('\n')[0]);
-}
+import { findWorkspace } from '$($InstallDir -replace '\\','/')/dist/dbeaver.js';
+try { findWorkspace(); console.log('OK Workspace encontrado'); }
+catch(e) { console.log('AVISO: ' + e.message.split('\n')[0]); }
 "@
-& $NodeCmd -e $testScript
+& $NodeCmd --input-type=module -e $testScript
 
 # 7. Criar diretorio de configuracao e settings padrao
 Write-Host ""
