@@ -4,7 +4,7 @@
   "description": "MCP server exposing DBeaver connections to Claude",
   "type": "module",
   "bin": {
-    "dbeaver-mcp": "./dist/index.js"
+    "dbeaver-mcp": "./dist/cli.js"
   },
   "main": "dist/index.js",
   "files": [

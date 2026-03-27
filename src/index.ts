@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * index.ts — MCP server entry point for dbeaver-mcp.
  * Exposes DBeaver connections as MCP tools via stdio transport.
@@ -10,17 +9,17 @@ import { registerConnectionTools } from "./tools/connections.js";
 import { registerQueryTools } from "./tools/queries.js";
 import { registerSchemaTools } from "./tools/schema.js";
 
-const server = new McpServer({
-  name: "dbeaver-mcp",
-  version: "1.0.0",
-});
+export async function startServer(): Promise<void> {
+  const server = new McpServer({
+    name: "dbeaver-mcp",
+    version: "1.0.0",
+  });
 
-// Register all 12 tools
-registerConnectionTools(server);
-registerQueryTools(server);
-registerSchemaTools(server);
+  registerConnectionTools(server);
+  registerQueryTools(server);
+  registerSchemaTools(server);
 
-// Start stdio transport
-const transport = new StdioServerTransport();
-await server.connect(transport);
-console.error("dbeaver-mcp server started (stdio)");
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("dbeaver-mcp server started (stdio)");
+}
