@@ -68,7 +68,7 @@ echo ""
 echo "Configurando diretório ~/.dbeaver-mcp..."
 mkdir -p "$HOME/.dbeaver-mcp"
 if [ ! -f "$HOME/.dbeaver-mcp/settings.json" ]; then
-  cp "$INSTALL_DIR/settings.example.json" "$HOME/.dbeaver-mcp/settings.json"
+  cp "$INSTALL_DIR/settings.default.json" "$HOME/.dbeaver-mcp/settings.json"
   echo "✓ settings.json criado em ~/.dbeaver-mcp/"
 else
   echo "✓ settings.json já existe em ~/.dbeaver-mcp/"

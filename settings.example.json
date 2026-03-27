@@ -5,11 +5,14 @@
       "blocked_operations": ["DROP", "TRUNCATE"]
     },
     "connections": {
-      "producao": {
+      "NOVO PROD": {
         "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"]
       },
-      "staging": {
+      "Aproval Staging": {
         "allowed_operations": ["SELECT", "INSERT", "UPDATE", "DELETE", "SHOW", "EXPLAIN", "DESCRIBE", "CREATE", "ALTER"]
+      },
+      "localhost": {
+        "allowed_operations": ["SELECT", "INSERT", "UPDATE", "DELETE", "SHOW", "EXPLAIN", "DESCRIBE", "CREATE", "ALTER", "DROP", "TRUNCATE"]
       }
     }
   }

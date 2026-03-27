@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "global": {
+      "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"]
+    }
+  }
+}

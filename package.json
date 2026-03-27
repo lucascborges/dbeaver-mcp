@@ -9,6 +9,7 @@
   "main": "dist/index.js",
   "files": [
     "dist",
+    "settings.default.json",
     "settings.example.json"
   ],
   "scripts": {

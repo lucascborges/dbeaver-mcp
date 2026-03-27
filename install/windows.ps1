@@ -88,7 +88,7 @@ if (-not (Test-Path $ConfigDir)) {
 }
 $SettingsFile = "$ConfigDir\settings.json"
 if (-not (Test-Path $SettingsFile)) {
-    Copy-Item "$InstallDir\settings.example.json" $SettingsFile
+    Copy-Item "$InstallDir\settings.default.json" $SettingsFile
     Write-Host "OK settings.json criado em $ConfigDir" -ForegroundColor Green
 } else {
     Write-Host "OK settings.json ja existe em $ConfigDir" -ForegroundColor Green
