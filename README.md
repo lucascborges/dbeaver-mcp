@@ -2,6 +2,8 @@
 
 MCP server that exposes your DBeaver connections to Claude as tools. Decrypts credentials in memory — never persists passwords to disk.
 
+**[Leia em Português](README.pt-br.md)**
+
 Use your existing DBeaver database connections directly from Claude Code or Claude Desktop to query, manage, and analyze MySQL databases without re-entering credentials.
 
 ## How It Works
