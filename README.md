@@ -9,15 +9,21 @@ Use your existing DBeaver database connections directly from Claude Code or Clau
 ```
 Claude (Code / Desktop)
     ↓ MCP stdio (JSON-RPC 2.0)
-dbeaver-mcp server (Python)
+dbeaver-mcp server (Node.js)
     ├── Reads DBeaver's data-sources.json + credentials-config.json
-    ├── Decrypts passwords in memory (AES-CBC, DBeaver's built-in key)
-    └── Connects to MySQL via mysql-connector-python
+    ├── Decrypts passwords in memory (AES-128-CBC, DBeaver's built-in key)
+    └── Connects to MySQL via mysql2
 ```
 
 ## Quick Start
 
-### 1. Clone & Install
+### Option 1: NPX (recommended)
+
+```bash
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
+```
+
+### Option 2: Clone & Install
 
 **macOS:**
 ```bash
@@ -38,20 +44,22 @@ cd $env:USERPROFILE\.dbeaver-mcp; .\install\windows.ps1
 ```
 
 The install script will:
-- Check for Python 3 and install pip dependencies
+- Check for Node.js and install npm dependencies
+- Build the TypeScript source
 - Verify your DBeaver workspace exists
 - Register the server with your OS service manager (launchd / systemd)
 - Register the MCP server with Claude Code (if installed)
 
-### 2. Manual Setup (if not using install scripts)
+### Option 3: Manual Setup
 
 ```bash
-pip install mysql-connector-python pycryptodome
+git clone https://github.com/lucascborges/dbeaver-mcp.git
+cd dbeaver-mcp && npm install && npm run build
 ```
 
 **Claude Code:**
 ```bash
-claude mcp add dbeaver-mcp -- python /path/to/dbeaver-mcp/scripts/server.py
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
 ```
 
 **Claude Desktop** (`claude_desktop_config.json`):
@@ -59,8 +67,8 @@ claude mcp add dbeaver-mcp -- python /path/to/dbeaver-mcp/scripts/server.py
 {
   "mcpServers": {
     "dbeaver-mcp": {
-      "command": "python",
-      "args": ["/path/to/dbeaver-mcp/scripts/server.py"]
+      "command": "npx",
+      "args": ["dbeaver-mcp"]
     }
   }
 }
@@ -74,8 +82,8 @@ claude mcp add dbeaver-mcp -- python /path/to/dbeaver-mcp/scripts/server.py
 |---|---|
 | `list_connections` | List all DBeaver connections (no passwords exposed) |
 | `get_connection` | Get connection details by name |
-| `add_connection` | Add a new connection to DBeaver |
-| `edit_connection` | Edit host, port, database, user, or password |
+| `add_connection` | Add a new connection (configure credentials in DBeaver) |
+| `edit_connection` | Edit host, port, or database (credentials managed via DBeaver) |
 | `remove_connection` | Remove a connection |
 | `test_connection` | Test connectivity and return MySQL version |
 
@@ -101,12 +109,48 @@ claude mcp add dbeaver-mcp -- python /path/to/dbeaver-mcp/scripts/server.py
 | `show_processlist` | Show currently running queries |
 | `show_slow_queries` | List slow queries from performance_schema |
 
+## Permissions
+
+Control which SQL operations are allowed globally or per connection via `~/.dbeaver-mcp/settings.json`:
+
+```json
+{
+  "permissions": {
+    "global": {
+      "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"],
+      "blocked_operations": ["DROP", "TRUNCATE"]
+    },
+    "connections": {
+      "production": {
+        "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"]
+      },
+      "staging": {
+        "allowed_operations": ["SELECT", "INSERT", "UPDATE", "DELETE", "SHOW", "EXPLAIN", "DESCRIBE", "CREATE", "ALTER"]
+      }
+    }
+  }
+}
+```
+
+**Resolution logic:**
+- If the connection has an entry in `connections`, use its permissions (total override)
+- Otherwise, use `global` permissions
+- If `settings.json` or `permissions` doesn't exist, everything is allowed (backward-compatible)
+- `allowed_operations` is a whitelist — only listed operations are permitted
+- `blocked_operations` is an optional blacklist within global — blocks even if not in the whitelist
+
+**Recognized operations:** `SELECT`, `SHOW`, `EXPLAIN`, `DESCRIBE`, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `REVOKE`, `FLUSH`, `OPTIMIZE`, `REPAIR`, `USE`, `SET`
+
+The install scripts copy `settings.example.json` to `~/.dbeaver-mcp/settings.json` if it doesn't already exist.
+
 ## Security
 
-- **Passwords are never written to disk or logs** — decrypted only in memory
+- **Proxy model** — credentials never flow through MCP; managed exclusively in DBeaver
+- **Passwords are never written to disk or logs** — decrypted only in memory for MySQL connections
 - `credentials-config.json` and `data-sources.json` are in `.gitignore`
 - `run_query` **blocks** write operations (INSERT, UPDATE, DELETE, DROP, etc.)
 - `run_write` **requires** `confirmed: true` before executing — prevents accidental writes
+- **Configurable permissions** per connection via `~/.dbeaver-mcp/settings.json`
 
 ## DBeaver Workspace Paths
 
@@ -124,44 +168,53 @@ Additional paths are checked for alternative installations (Homebrew, Snap, etc.
 
 ```bash
 # List available tools
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python scripts/server.py
-
-# List your DBeaver connections
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_connections","arguments":{}}}' | python scripts/server.py
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | node dist/index.js
 ```
 
 ## Project Structure
 
 ```
 dbeaver-mcp/
-├── dbeaver.py              # Core library: read/write DBeaver configs, encrypt/decrypt
-├── scripts/
-│   └── server.py           # MCP server (stdio, JSON-RPC 2.0) — 13 tools
+├── src/
+│   ├── index.ts            # MCP server entry point (stdio transport)
+│   ├── dbeaver.ts          # Core: read/write DBeaver configs, AES-128-CBC crypto
+│   ├── permissions.ts      # Permission system (global + per-connection)
+│   ├── mysql.ts            # MySQL connection and query execution (mysql2)
+│   └── tools/
+│       ├── connections.ts  # Tools: list, get, add, edit, remove, test connection
+│       ├── queries.ts      # Tools: run_query, run_write
+│       └── schema.ts       # Tools: list_tables, describe_table, explain, processlist, slow queries
+├── dist/                   # Compiled JS (generated by tsc)
 ├── install/
-│   ├── mac.sh              # macOS: pip + launchd + Claude registration
-│   ├── linux.sh            # Linux: pip + systemd user service + Claude registration
-│   └── windows.ps1         # Windows: pip + Claude registration + .bat helper
+│   ├── mac.sh              # macOS: npm + launchd + Claude registration
+│   ├── linux.sh            # Linux: npm + systemd user service + Claude registration
+│   └── windows.ps1         # Windows: npm + Claude registration + .bat helper
 ├── references/
 │   ├── dbeaver/            # DBeaver internals (credentials, datasources, workspace)
 │   └── mysql/              # 15 MySQL reference guides (indexes, queries, locking, DDL, etc.)
+├── package.json            # NPX-ready with bin field
+├── tsconfig.json           # TypeScript config
+├── settings.example.json   # Example permissions config
 ├── SKILL.md                # AI agent skill definition with workflows and best practices
 ├── CLAUDE.md               # Project instructions for Claude Code
-├── requirements.txt        # mysql-connector-python, pycryptodome
 └── .gitignore              # Blocks credentials and sensitive files
 ```
 
 ## Requirements
 
-- **Python 3.8+**
+- **Node.js 18+**
 - **DBeaver** installed with at least one saved connection
 - **MySQL** database accessible from your machine
 
-### Python Dependencies
+### Dependencies
 
 | Package | Purpose |
 |---|---|
-| `mysql-connector-python` | MySQL database driver |
-| `pycryptodome` | AES decryption of DBeaver credentials |
+| `@modelcontextprotocol/sdk` | MCP server framework |
+| `mysql2` | MySQL database driver |
+| `zod` | Input schema validation |
 
 ## License
 

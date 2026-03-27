@@ -7,15 +7,9 @@ connections.json
 *.key
 *.pem
 
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# Node.js
+node_modules/
 dist/
-build/
-.venv/
-venv/
-env/
 
 # Logs
 *.log

@@ -18,10 +18,10 @@ Skill completa para operar MySQL via credenciais DBeaver com boas práticas de b
 ```
 Claude (skill)
     ↓ MCP stdio
-dbeaver-mcp server (Python local)
+dbeaver-mcp server (Node.js)
     ├── Lê credenciais do DBeaver (em memória, nunca em disco)
     ├── Gerencia data-sources.json (adicionar/editar/remover conexões)
-    └── Executa queries MySQL via mysql-connector-python
+    └── Executa queries MySQL via mysql2
 ```
 
 ## Início rápido
@@ -40,9 +40,9 @@ dbeaver-mcp server (Python local)
 | Tool | Descrição |
 |---|---|
 | `list_connections` | Lista todas as conexões DBeaver com host/porta/banco |
-| `get_connection` | Retorna detalhes de uma conexão pelo nome (sem expor senha) |
-| `add_connection` | Adiciona nova conexão ao DBeaver |
-| `edit_connection` | Edita host, porta, banco, usuário ou senha de uma conexão |
+| `get_connection` | Retorna detalhes de uma conexão pelo nome |
+| `add_connection` | Adiciona nova conexão ao DBeaver (configure credenciais no DBeaver) |
+| `edit_connection` | Edita host, porta ou banco de uma conexão (credenciais via DBeaver) |
 | `remove_connection` | Remove uma conexão do DBeaver (pede confirmação) |
 | `test_connection` | Testa se uma conexão está funcionando |
 
@@ -149,20 +149,61 @@ Leia os arquivos abaixo conforme necessário (não carregue todos de uma vez):
 
 ---
 
+## Permissões
+
+O servidor suporta controle de permissões via `~/.dbeaver-mcp/settings.json`:
+
+```json
+{
+  "permissions": {
+    "global": {
+      "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"],
+      "blocked_operations": ["DROP", "TRUNCATE"]
+    },
+    "connections": {
+      "producao": {
+        "allowed_operations": ["SELECT", "SHOW", "EXPLAIN", "DESCRIBE"]
+      },
+      "staging": {
+        "allowed_operations": ["SELECT", "INSERT", "UPDATE", "DELETE", "SHOW", "EXPLAIN", "DESCRIBE", "CREATE", "ALTER"]
+      }
+    }
+  }
+}
+```
+
+**Lógica de resolução:**
+- Se a conexão tem entry em `connections`, usa as permissões dela (override total)
+- Se não, usa `global`
+- Se não existe `settings.json` ou `permissions`, tudo é permitido (backward-compatible)
+- `allowed_operations` é whitelist — só operações listadas são permitidas
+- `blocked_operations` é blacklist opcional — bloqueia mesmo se não listada explicitamente
+
+**Operações reconhecidas:** `SELECT`, `SHOW`, `EXPLAIN`, `DESCRIBE`, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `REVOKE`, `FLUSH`, `OPTIMIZE`, `REPAIR`, `USE`, `SET`
+
+---
+
 ## Guardrails
 
+- Credenciais nunca trafegam via MCP — gerenciadas exclusivamente pelo DBeaver
 - Nunca logar ou exibir senhas — credenciais ficam apenas em memória
 - Sempre pedir confirmação antes de operações destrutivas (DROP, DELETE sem WHERE, TRUNCATE)
 - Avisar sobre `ALGORITHM=COPY` em tabelas grandes antes de rodar DDL
 - Indicar versão do MySQL quando o comportamento for específico (ex: INSTANT DDL só no 8.0+)
 - Preferir evidências medidas (`EXPLAIN`, `performance_schema`) sobre regras de dedo
 - Nunca expor o conteúdo de `credentials-config.json` — apenas os metadados de conexão
+- Respeitar permissões configuradas em `~/.dbeaver-mcp/settings.json`
 
 ---
 
 ## Instalação
 
 Instrua o usuário a instalar conforme o OS:
+
+**Via NPX (mais simples):**
+```bash
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
+```
 
 **macOS:**
 ```bash
@@ -184,7 +225,7 @@ cd $env:USERPROFILE\.dbeaver-mcp; .\install\windows.ps1
 
 Após instalar, registrar no Claude Code:
 ```bash
-claude mcp add dbeaver-mcp -- python ~/.dbeaver-mcp/scripts/server.py
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
 ```
 
 Ou no Claude Desktop (`claude_desktop_config.json`):
@@ -192,8 +233,8 @@ Ou no Claude Desktop (`claude_desktop_config.json`):
 {
   "mcpServers": {
     "dbeaver-mcp": {
-      "command": "python",
-      "args": ["~/.dbeaver-mcp/scripts/server.py"]
+      "command": "npx",
+      "args": ["dbeaver-mcp"]
     }
   }
 }

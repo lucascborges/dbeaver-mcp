@@ -1,0 +1,37 @@
+{
+  "name": "dbeaver-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing DBeaver connections to Claude",
+  "type": "module",
+  "bin": {
+    "dbeaver-mcp": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "settings.example.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "mysql2": "^3.6.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "dbeaver",
+    "mysql",
+    "claude",
+    "database"
+  ],
+  "license": "MIT"
+}

@@ -6,29 +6,39 @@ MCP server que expõe conexões DBeaver ao Claude como tools. Lê credenciais cr
 
 ```
 dbeaver-mcp/
-├── dbeaver.py          # Lê/escreve data-sources.json e credentials-config.json
-├── scripts/server.py   # MCP server stdio — 13 tools
-├── install/            # Scripts de instalação por OS
-│   ├── mac.sh          # macOS: launchd + claude mcp add
-│   ├── linux.sh        # Linux: systemd user + claude mcp add
-│   └── windows.ps1     # Windows: PowerShell
-├── references/
-│   ├── dbeaver/        # credentials.md, datasources.md, workspace.md
-│   └── mysql/          # 15 arquivos de referência MySQL (planetscale/database-skills)
-├── SKILL.md            # Skill para agentes AI
-└── requirements.txt    # mysql-connector-python, pycryptodome
+├── src/
+│   ├── index.ts            # Entry point: MCP server setup + stdio transport
+│   ├── dbeaver.ts          # Core: ler configs DBeaver, crypto AES-128-CBC, CRUD conexões
+│   ├── permissions.ts      # Carregar settings.json, check de permissão por conexão
+│   ├── mysql.ts            # Wrappers de conexão e execução de queries (mysql2)
+│   └── tools/
+│       ├── connections.ts  # Tools: list, get, add, edit, remove, test connection
+│       ├── queries.ts      # Tools: run_query, run_write
+│       └── schema.ts       # Tools: list_tables, describe_table, explain, processlist, slow queries
+├── dist/                   # JS compilado (gitignored)
+├── install/                # Scripts de instalação por OS
+├── references/             # Docs de referência DBeaver + MySQL
+├── package.json            # NPX-ready com bin field
+├── tsconfig.json           # TypeScript config
+└── settings.example.json   # Exemplo de permissões
 ```
 
 ## Dependências
 
 ```bash
-pip install mysql-connector-python pycryptodome
+npm install
+```
+
+## Build
+
+```bash
+npm run build
 ```
 
 ## Rodar o servidor
 
 ```bash
-python scripts/server.py
+node dist/index.js
 ```
 
 O servidor usa protocolo MCP via stdio (JSON-RPC 2.0).
@@ -36,7 +46,7 @@ O servidor usa protocolo MCP via stdio (JSON-RPC 2.0).
 ## Registrar no Claude Code
 
 ```bash
-claude mcp add dbeaver-mcp -- python /caminho/para/dbeaver-mcp/scripts/server.py
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
 ```
 
 ## Registrar no Claude Desktop
@@ -45,8 +55,8 @@ claude mcp add dbeaver-mcp -- python /caminho/para/dbeaver-mcp/scripts/server.py
 {
   "mcpServers": {
     "dbeaver-mcp": {
-      "command": "python",
-      "args": ["/caminho/para/dbeaver-mcp/scripts/server.py"]
+      "command": "npx",
+      "args": ["dbeaver-mcp"]
     }
   }
 }
@@ -57,9 +67,9 @@ claude mcp add dbeaver-mcp -- python /caminho/para/dbeaver-mcp/scripts/server.py
 | Tool | Descrição |
 |---|---|
 | `list_connections` | Lista conexões DBeaver (sem senhas) |
-| `get_connection` | Detalhes de uma conexão pelo nome |
-| `add_connection` | Adiciona nova conexão |
-| `edit_connection` | Edita host/porta/banco/usuário/senha |
+| `get_connection` | Retorna detalhes de uma conexão pelo nome |
+| `add_connection` | Adiciona nova conexão (configure credenciais no DBeaver) |
+| `edit_connection` | Edita host/porta/banco (credenciais via DBeaver) |
 | `remove_connection` | Remove uma conexão |
 | `test_connection` | Testa conectividade |
 | `run_query` | SELECT/SHOW/EXPLAIN (somente leitura) |
@@ -70,12 +80,24 @@ claude mcp add dbeaver-mcp -- python /caminho/para/dbeaver-mcp/scripts/server.py
 | `show_processlist` | Queries em execução |
 | `show_slow_queries` | Queries lentas do performance_schema |
 
+## Permissões
+
+O sistema suporta controle de permissões via `~/.dbeaver-mcp/settings.json`:
+
+- **Global** — define operações SQL permitidas por padrão
+- **Por conexão** — override das permissões globais para conexões específicas
+
+Lógica de resolução: conexão específica → global → tudo permitido (backward-compatible).
+
+Veja `settings.example.json` para exemplo de configuração.
+
 ## Segurança
 
 - Senhas descriptografadas em memória, nunca logadas
 - `credentials-config.json` e `data-sources.json` estão no `.gitignore`
 - `run_write` exige `confirmed: true` antes de executar
 - `run_query` bloqueia INSERT/UPDATE/DELETE/DROP
+- Permissões configuráveis por conexão via `~/.dbeaver-mcp/settings.json`
 
 ## Caminhos do workspace DBeaver por OS
 
@@ -88,6 +110,7 @@ claude mcp add dbeaver-mcp -- python /caminho/para/dbeaver-mcp/scripts/server.py
 ## Testar sem Claude
 
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python scripts/server.py
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_connections","arguments":{}}}' | python scripts/server.py
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | node dist/index.js
 ```
