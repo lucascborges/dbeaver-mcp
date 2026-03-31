@@ -26,7 +26,7 @@ dbeaver-mcp server (Node.js)
 
 ## Início rápido
 
-1. Verificar se o servidor MCP está rodando: pergunte ao usuário se instalou via `install.sh`
+1. Verificar se o servidor MCP está rodando: pergunte ao usuário se instalou via `npx dbeaver-mcp install`
 2. Se não instalado: instrua a instalar (veja seção Instalação abaixo)
 3. Listar conexões disponíveis com `list_connections`
 4. Pedir qual conexão usar se não for óbvio no contexto
@@ -198,37 +198,25 @@ O servidor suporta controle de permissões via `~/.dbeaver-mcp/settings.json`:
 
 ## Instalação
 
-Instrua o usuário a instalar conforme o OS:
+Instrua o usuário a instalar conforme a preferência:
 
-**Via NPX (mais simples):**
+**Opção 1 — Um comando (recomendado):**
 ```bash
 claude mcp add dbeaver-mcp -- npx dbeaver-mcp
 ```
 
-**macOS:**
+Para registrar globalmente (disponível em todos os projetos):
 ```bash
-git clone https://github.com/lucascborges/dbeaver-mcp.git ~/.dbeaver-mcp
-cd ~/.dbeaver-mcp && ./install/mac.sh
+claude mcp add dbeaver-mcp --scope user -- npx dbeaver-mcp
 ```
 
-**Linux:**
+**Opção 2 — Instalador integrado:**
 ```bash
-git clone https://github.com/lucascborges/dbeaver-mcp.git ~/.dbeaver-mcp
-cd ~/.dbeaver-mcp && ./install/linux.sh
+npx dbeaver-mcp install
 ```
+O instalador verifica o workspace DBeaver, cria `~/.dbeaver-mcp/settings.json` e registra no Claude Code automaticamente.
 
-**Windows (PowerShell como Admin):**
-```powershell
-git clone https://github.com/lucascborges/dbeaver-mcp.git $env:USERPROFILE\.dbeaver-mcp
-cd $env:USERPROFILE\.dbeaver-mcp; .\install\windows.ps1
-```
-
-Após instalar, registrar no Claude Code:
-```bash
-claude mcp add dbeaver-mcp -- npx dbeaver-mcp
-```
-
-Ou no Claude Desktop (`claude_desktop_config.json`):
+**Opção 3 — Claude Desktop** (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {

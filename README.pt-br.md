@@ -88,36 +88,33 @@ Cada linha do tratamento de credenciais está em [`src/dbeaver.ts`](src/dbeaver.
 
 ## Início Rápido
 
-### Opção 1: Script de instalação (recomendado)
+### Opção 1: Um comando (recomendado)
 
-**macOS:**
+Registra globalmente no Claude Code, funciona em todos os sistemas operacionais:
+
 ```bash
-git clone https://github.com/lucascborges/dbeaver-mcp.git /tmp/dbeaver-mcp
-cd /tmp/dbeaver-mcp && ./install/mac.sh
+claude mcp add dbeaver-mcp -- npx dbeaver-mcp
 ```
 
-**Linux:**
+Para registrar no escopo do usuário (persiste entre projetos):
+
 ```bash
-git clone https://github.com/lucascborges/dbeaver-mcp.git /tmp/dbeaver-mcp
-cd /tmp/dbeaver-mcp && ./install/linux.sh
+claude mcp add dbeaver-mcp --scope user -- npx dbeaver-mcp
 ```
 
-**Windows (PowerShell):**
-```powershell
-git clone https://github.com/lucascborges/dbeaver-mcp.git $env:TEMP\dbeaver-mcp
-cd $env:TEMP\dbeaver-mcp; .\install\windows.ps1
+### Opção 2: Instalador integrado
+
+```bash
+npx dbeaver-mcp install
 ```
 
-O script de instalação vai:
-1. Verificar Node.js e npm
-2. Copiar o projeto para `~/.skills/dbeaver-mcp`
-3. Instalar dependências e compilar TypeScript
-4. Verificar se seu workspace DBeaver está acessível
-5. Criar `~/.dbeaver-mcp/settings.json` (config de permissões)
-6. Registrar no gerenciador de serviços do OS (launchd / systemd)
-7. Registrar o servidor MCP no Claude Code
+O instalador vai:
+1. Verificar se seu workspace DBeaver está acessível
+2. Criar `~/.dbeaver-mcp/settings.json` (config de permissões)
+3. Registrar o servidor MCP automaticamente no Claude Code
+4. Exibir o snippet de configuração para o Claude Desktop
 
-### Opção 2: Setup Manual
+### Opção 3: Setup Manual
 
 ```bash
 git clone https://github.com/lucascborges/dbeaver-mcp.git ~/.skills/dbeaver-mcp
@@ -238,18 +235,17 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 dbeaver-mcp/
 ├── src/
 │   ├── index.ts            # Entry point do servidor MCP (transporte stdio)
+│   ├── cli.ts              # Dispatcher CLI (install, --help, --version, ou inicia servidor)
 │   ├── dbeaver.ts          # Core: leitura/escrita configs DBeaver, crypto AES-128-CBC
 │   ├── permissions.ts      # Sistema de permissões (global + por conexão)
 │   ├── mysql.ts            # Conexão e execução de queries MySQL (mysql2)
+│   ├── commands/
+│   │   └── install.ts      # Instalador integrado (verifica DBeaver, cria config, registra no Claude)
 │   └── tools/
 │       ├── connections.ts  # Tools: list, get, add, edit, remove, test conexão
 │       ├── queries.ts      # Tools: run_query, run_write
 │       └── schema.ts       # Tools: list_tables, describe_table, explain, processlist, slow queries
 ├── dist/                   # JS compilado (gerado pelo tsc)
-├── install/
-│   ├── mac.sh              # Instalador macOS
-│   ├── linux.sh            # Instalador Linux
-│   └── windows.ps1         # Instalador Windows
 ├── references/
 │   ├── dbeaver/            # Internos do DBeaver (credenciais, datasources, workspace)
 │   └── mysql/              # 15 guias de referência MySQL
